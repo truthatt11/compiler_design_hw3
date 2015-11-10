@@ -7,6 +7,9 @@
 #include <string.h>
 #include <stdarg.h>
 #include "header.h"
+
+#define YYDEBUG 1
+
 int linenumber = 1;
 AST_NODE *prog;
 
@@ -226,8 +229,7 @@ param_list	: param_list MK_COMMA  param
             | param	
                 {
                     /*TODO*/
-                    $$ = makeDeclNode(FUNCTION_PARAMETER_DECL);
-                    makeChild($$, $1);
+                    $$ = $1;
                 }
             ;
 
@@ -286,7 +288,7 @@ block           : decl_list stmt_list
                 |
                     {
                         /*TODO*/
-                        $$ = Allocate(NUL_NODE);
+                        $$ = Allocate(BLOCK_NODE);
                     }
                 ;
  
@@ -298,8 +300,7 @@ decl_list	: decl_list decl
             | decl 
                 {
                         /*TODO*/
-                        $$ = makeDeclNode(VARIABLE_DECL);
-                        makeChild($$, $1);
+                        $$ = $1;
                 }
             ;
 
@@ -323,19 +324,21 @@ type_decl 	: TYPEDEF type id_list MK_SEMICOLON
                 {
                     /*TODO*/
                     $$ = makeDeclNode(TYPE_DECL);
-                    makeFamily($$, 2, makeIDNode("null", NORMAL_ID), $3);
+                    makeFamily($$, 2, makeIDNode("void", NORMAL_ID), $3);
                 }
             ;
 
 var_decl	: type init_id_list MK_SEMICOLON 
                 {
                     /*TODO*/
-                    /* identifier node(int) ---> identifier node(int_id_list) */
+                    /* identifier node(int) ---> identifier node(init_id_list) */
+                    $$ = makeDeclNode(VARIABLE_DECL);
                     makeFamily($$, 2, $1, $2);
                 }
             | ID id_list MK_SEMICOLON
                 {
                     /*TODO*/
+                    $$ = makeDeclNode(VARIABLE_DECL);
                     makeFamily($$, 2, $1, $2);
                 }
             ;
@@ -469,7 +472,7 @@ stmt_list	: stmt_list stmt
             | stmt
                 {
                     /*TODO*/
-                    makeChild($$, $1);
+                    $$ = $1;
                 }
             ;
 
@@ -478,7 +481,7 @@ stmt_list	: stmt_list stmt
 stmt		: MK_LBRACE block MK_RBRACE 
                 {
                     /*TODO*/
-                    makeChild($$, $2);
+                    $$ = $2;
                 }
             /*TODO: | While Statement */
             | WHILE MK_LPAREN relop_expr_list MK_RPAREN stmt
@@ -553,6 +556,7 @@ nonempty_assign_expr_list        : nonempty_assign_expr_list MK_COMMA assign_exp
                                  | assign_expr
                                     {
                                         /*TODO*/
+                                        $$ = Allocate(NONEMPTY_ASSIGN_EXPR_LIST_NODE);
                                         makeChild($$, $1);
                                     }
                                  ;
@@ -566,7 +570,7 @@ test		: assign_expr
 assign_expr     : ID OP_ASSIGN relop_expr 
                     {
                         /*TODO*/
-                        $$ = Allocate(EXPR_NODE);
+                        $$ = makeStmtNode(ASSIGN_STMT);
                         makeFamily($$, 2, makeIDNode($1, NORMAL_ID), $3);
                     }
                 | relop_expr
@@ -664,6 +668,7 @@ nonempty_relop_expr_list	: nonempty_relop_expr_list MK_COMMA relop_expr
                             | relop_expr 
                                 {
                                     /*TODO*/
+                                    $$ = Allocate(NONEMPTY_RELOP_EXPR_LIST_NODE);
                                     makeChild($$, $1);
                                 }
                             ;
@@ -818,6 +823,7 @@ int argc;
 char *argv[];
   {
      yyin = fopen(argv[1],"r");
+     yydebug = 1;
      yyparse();
 	 printf("%s\n", "Parsing completed. No errors found.");
 	 printGV(prog, NULL);
